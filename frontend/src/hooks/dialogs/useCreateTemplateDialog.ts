@@ -32,6 +32,7 @@ import {
   updateMetadataItem,
   reorderMetadataItems
 } from './templateDialogUtils';
+import { prefillMetadataFromMapping } from '@/utils/templates/metadataPrefill';
 
 export function useCreateTemplateDialog() {
   const createDialog = useDialog('createTemplate');
@@ -89,6 +90,12 @@ export function useCreateTemplateDialog() {
               title: { en: 'Template Content' }
             }
           ]);
+        }
+
+        if (currentTemplate.enhanced_metadata) {
+          setMetadata(currentTemplate.enhanced_metadata);
+        } else if (currentTemplate.metadata) {
+          prefillMetadataFromMapping(currentTemplate.metadata).then(setMetadata);
         }
       } else {
         setName('');
