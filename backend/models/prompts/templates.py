@@ -7,15 +7,15 @@ from enum import Enum
 
 class TemplateMetadata(BaseModel):
     """Metadata references block IDs, 0 means empty/no value"""
-    role: Optional[int]
-    context: Optional[int]
-    goal: Optional[int]
-    tone_style: Optional[int]
-    output_format: Optional[int]
-    audience: Optional[int]
-    examples: Optional[List[int]]
-    constraints: Optional[List[int]]
-    thinking_steps: Optional[List[int]]
+    role: Optional[int] = None
+    context: Optional[int] = None
+    goal: Optional[int] = None
+    tone_style: Optional[int] = None
+    output_format: Optional[int] = None
+    audience: Optional[int] = None
+    examples: Optional[List[int]] = None
+    constraints: Optional[List[int]] = None
+    thinking_steps: Optional[List[int]] = None
 
 class TemplateBase(BaseModel):
     title: Union[str, Dict[str, str]]

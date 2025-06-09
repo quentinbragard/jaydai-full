@@ -93,7 +93,7 @@ export const AdvancedEditor: React.FC<AdvancedEditorProps> = ({
           <Textarea
             value={content}
             onChange={e => onContentChange(e.target.value)}
-            className="jd-min-h-[200px] jd-text-sm jd-resize-none"
+            className="!jd-min-h-[250px] jd-text-sm jd-resize-none"
             placeholder="Enter prompt content..."
           />
         </div>

@@ -25,7 +25,6 @@ def process_template_for_response(template_data: dict, locale: str = "en") -> di
         "id": template_data.get("id"),
         "title": title,
         "content": normalize_content_to_dict(template_data.get("content", {}), locale),
-        "metadata": template_data.get("metadata", {}),
         "description": extract_localized_content(template_data.get("description", {}), locale),
         "folder_id": template_data.get("folder_id"),
         "type": template_data.get("type"),
@@ -35,9 +34,10 @@ def process_template_for_response(template_data: dict, locale: str = "en") -> di
         "user_id": template_data.get("user_id"),
         "organization_id": template_data.get("organization_id"),
         "company_id": template_data.get("company_id"),
-        "folder": template_data.get("folder")
+        "folder": template_data.get("folder"),
+        "metadata": template_data.get("metadata")
     }
-    
+
     return processed
 
 async def fetch_templates_for_folders(
