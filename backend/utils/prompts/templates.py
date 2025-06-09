@@ -16,9 +16,6 @@ def process_template_for_response(template_data: dict, locale: str = "en") -> di
     # Extract localized title and content
     title = extract_localized_content(template_data.get("title", {}), locale)
     
-    # Make sure blocks field exists (even if empty)
-    if "blocks" not in template_data:
-        template_data["blocks"] = []
     
     # Create a processed template with all fields
     processed = {
@@ -111,47 +108,6 @@ def add_templates_to_folders(folders: List[Dict], templates_by_folder: Dict[int,
     return folders_with_templates
 
 
-async def expand_template_blocks(template_data: dict, locale: str = "en") -> dict:
-    """Expand block references in a template"""
-    if not template_data.get("blocks"):
-        # If no blocks array, create default content block
-        template_data["expanded_blocks"] = [{
-            "id": 0,
-            "type": "content",
-            "content": normalize_content_to_dict(template_data.get("content", {}), locale),
-            "name": "Template Content"
-        }]
-        return template_data
-    
-    # Get all referenced blocks (excluding 0)
-    block_ids = [bid for bid in template_data["blocks"] if bid != 0]
-    expanded_blocks = []
-    
-    # Process blocks in order
-    for block_id in template_data["blocks"]:
-        if block_id == 0:
-            # Add template's own content
-            expanded_blocks.append({
-                "id": 0,
-                "type": "content",
-                "content": normalize_content_to_dict(template_data.get("content", {}), locale),
-                "name": "Template Content"
-            })
-        else:
-            # Fetch actual block from database
-            block_response = supabase.table("prompt_blocks").select("*").eq("id", block_id).single().execute()
-            if block_response.data:
-                block = block_response.data
-                expanded_blocks.append({
-                    "id": block["id"],
-                    "type": block["type"],
-                    "content": normalize_content_to_dict(block.get("content", {}), locale),
-                    "name": block.get("name"),
-                    "description": block.get("description")
-                })
-    
-    template_data["expanded_blocks"] = expanded_blocks
-    return template_data
 
 # Helper function to ensure content is always a dictionary
 def normalize_content_to_dict(content, locale: str = "en"):

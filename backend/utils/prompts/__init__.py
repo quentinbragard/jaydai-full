@@ -25,7 +25,6 @@ from .templates import (
     fetch_templates_for_folders,
     organize_templates_by_folder,
     add_templates_to_folders,
-    expand_template_blocks,
     validate_block_access,
     normalize_localized_field
 )
@@ -52,7 +51,6 @@ __all__ = [
     'fetch_templates_for_folders',
     'organize_templates_by_folder',
     'add_templates_to_folders',
-    'expand_template_blocks',
     'validate_block_access',
     'normalize_localized_field'
 ]

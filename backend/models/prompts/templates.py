@@ -15,7 +15,6 @@ class TemplateMetadata(BaseModel):
     audience: Optional[int] = None
     examples: Optional[List[int]] = None
     constraints: Optional[List[int]] = None
-    thinking_steps: Optional[List[int]] = None
 
 class TemplateBase(BaseModel):
     title: Union[str, Dict[str, str]]

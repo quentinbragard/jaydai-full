@@ -3,7 +3,7 @@ from fastapi import Depends, HTTPException
 from models.prompts.templates import TemplateResponse
 from models.common import APIResponse
 from utils import supabase_helpers
-from utils.prompts import process_template_for_response, expand_template_blocks
+from utils.prompts import process_template_for_response
 from utils.access_control import get_user_metadata
 from . import router, supabase
 
@@ -11,7 +11,6 @@ from . import router, supabase
 async def get_template_by_id(
     template_id: str,
     locale: Optional[str] = "en",
-    expand_blocks: bool = True,
     user_id: str = Depends(supabase_helpers.get_user_from_session_token),
 ):
     """Get a specific template by ID."""
@@ -35,9 +34,6 @@ async def get_template_by_id(
                 raise HTTPException(status_code=403, detail="Access denied")
 
         processed_template = process_template_for_response(template_data, locale)
-
-        if expand_blocks:
-            processed_template = await expand_template_blocks(processed_template, locale)
 
         return APIResponse(success=True, data=processed_template)
 

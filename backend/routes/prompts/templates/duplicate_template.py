@@ -2,7 +2,7 @@ from fastapi import Depends, HTTPException
 from models.prompts.templates import TemplateResponse
 from models.common import APIResponse
 from utils import supabase_helpers
-from utils.prompts import process_template_for_response, expand_template_blocks, validate_block_access
+from utils.prompts import process_template_for_response, validate_block_access
 from utils.access_control import get_user_metadata
 from . import router, supabase
 
@@ -31,23 +31,14 @@ async def duplicate_template(
             if original_template.get("company_id") != metadata.get("company_id"):
                 raise HTTPException(status_code=403, detail="Access denied")
 
-        blocks = original_template.get("blocks", [])
-        block_ids = [bid for bid in blocks if bid != 0]
-        if block_ids:
-            has_access = await validate_block_access(block_ids, user_id)
-            if not has_access:
-                raise HTTPException(status_code=403, detail="Access denied to one or more referenced blocks")
-
         duplicate_data = {
             "user_id": user_id,
             "organization_id": None,
             "type": "user",
             "title": original_template["title"],
             "content": original_template["content"],
-            "blocks": blocks,
             "description": original_template.get("description"),
             "folder_id": None,
-            "tags": original_template.get("tags", []),
             "usage_count": 0
         }
 
@@ -55,8 +46,7 @@ async def duplicate_template(
 
         if response.data:
             processed_template = process_template_for_response(response.data[0], "en")
-            expanded_template = await expand_template_blocks(processed_template, "en")
-            return APIResponse(success=True, data=expanded_template)
+            return APIResponse(success=True, data=processed_template)
         else:
             raise HTTPException(status_code=400, detail="Failed to duplicate template")
 
