@@ -11,7 +11,5 @@ from . import get_block
 
 __all__ = [
     "router",
-    "supabase",
-    "get_block",
+    "supabase"
 ]
-

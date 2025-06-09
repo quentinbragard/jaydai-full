@@ -103,7 +103,7 @@ const handleTemplateComplete = useCallback((finalContent: string) => {
 }, []);
 
 // Updated useTemplate function with cross-platform support
-const useTemplate = useCallback((template: Template) => {
+const useTemplate = useCallback(async (template: Template) => {
   // Validation
   if (!template) {
     toast.error('Invalid template data');
@@ -131,13 +131,10 @@ const useTemplate = useCallback((template: Template) => {
       title: template.title || 'Untitled Template',
       type: template.type,
       id: template.id,
-      expanded_blocks: (template as any).expanded_blocks,
       onComplete: handleTemplateComplete
     };
 
-    if ((template as any).enhanced_metadata) {
-      dialogData.enhanced_metadata = (template as any).enhanced_metadata;
-    } else if ((template as any).metadata) {
+    if ((template as any).metadata) {
       const meta = await prefillMetadataFromMapping((template as any).metadata);
       dialogData.enhanced_metadata = meta;
     }

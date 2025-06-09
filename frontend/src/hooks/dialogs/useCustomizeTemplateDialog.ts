@@ -31,6 +31,7 @@ import { prefillMetadataFromMapping } from '@/utils/templates/metadataPrefill';
 
 export function useCustomizeTemplateDialog() {
   const { isOpen, data, dialogProps } = useDialog('placeholderEditor');
+  const [content, setContent] = useState('');
   const [blocks, setBlocks] = useState<Block[]>([]);
   const [metadata, setMetadata] = useState<PromptMetadata>(DEFAULT_METADATA);
   const [error, setError] = useState<string | null>(null);
@@ -45,36 +46,23 @@ export function useCustomizeTemplateDialog() {
         let templateBlocks: Block[] = [];
         let templateMetadata: PromptMetadata = { ...DEFAULT_METADATA };
 
-        if (data.expanded_blocks && Array.isArray(data.expanded_blocks)) {
-          templateBlocks = data.expanded_blocks.map((block: any, index: number) => ({
-            id: block.id || Date.now() + index,
-            type: block.type || 'content',
-            content: getLocalizedContent(block.content) || '',
-            title: block.title || { en: `${(block.type || 'content').charAt(0).toUpperCase() + (block.type || 'content').slice(1)} Block` },
-            description: block.description || ''
-          }));
-
-          // Parse enhanced metadata from blocks if available
-          if (data.enhanced_metadata) {
-            templateMetadata = parseEnhancedMetadata(data.enhanced_metadata);
-          }
-        } else if (data.content) {
+        if (data.content) {
           const contentString = getLocalizedContent(data.content);
+          setContent(contentString);
           templateBlocks = [{
             id: Date.now(),
-            type: 'content',
+            type: 'custom',
             content: contentString,
             title: { en: 'Template Content' }
           }];
-
-          // Try to extract metadata from content structure if it follows the enhanced format
-          templateMetadata = extractMetadataFromContent(contentString);
+        } else {
+          setContent('');
         }
 
         setBlocks(templateBlocks);
         setMetadata(templateMetadata);
 
-        if (!data.enhanced_metadata && data.metadata) {
+        if (data.metadata) {
           prefillMetadataFromMapping(data.metadata).then(setMetadata);
         }
       } catch (err) {
@@ -182,7 +170,15 @@ export function useCustomizeTemplateDialog() {
   };
 
   const handleUpdateBlock = (blockId: number, updatedBlock: Partial<Block>) => {
-    setBlocks(prev => updateBlockUtil(prev, blockId, updatedBlock));
+    setBlocks(prev => {
+      const newBlocks = updateBlockUtil(prev, blockId, updatedBlock);
+      if (newBlocks.length > 0 && newBlocks[0].id === blockId) {
+        const first = newBlocks[0];
+        const newContent = typeof first.content === 'string' ? first.content : getLocalizedContent(first.content);
+        setContent(newContent);
+      }
+      return newBlocks;
+    });
   };
 
   const handleMoveBlock = (blockId: number, direction: 'up' | 'down') => {
@@ -257,6 +253,8 @@ export function useCustomizeTemplateDialog() {
   return {
     isOpen,
     error,
+    content,
+    setContent,
     blocks,
     metadata,
     isProcessing,

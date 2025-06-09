@@ -49,11 +49,15 @@ export const ContentSection: React.FC<ContentSectionProps> = ({
 
       <div className="jd-flex-1 jd-flex jd-flex-col jd-min-h-0 jd-space-y-4">
         {/* Main Content Block */}
-        {contentBlock && (
+        {contentBlock ? (
           <MainContentBlock
             block={contentBlock}
             onUpdateBlock={onUpdateBlock}
           />
+        ) : (
+          <div className="jd-flex jd-items-center jd-justify-center jd-min-h-[200px] jd-border jd-border-dashed jd-rounded-md jd-text-sm jd-text-muted-foreground">
+            No prompt content yet. Use the button below to add your first block.
+          </div>
         )}
 
         {/* Additional Blocks */}
@@ -142,7 +146,7 @@ const AdditionalBlocks: React.FC<{
         <div key={block.id} className="jd-animate-in jd-slide-in-from-bottom-2 jd-duration-300">
           <BlockCard
             block={block}
-            availableBlocks={availableBlocksByType[block.type || 'content'] || []}
+            availableBlocks={availableBlocksByType[block.type || 'custom'] || []}
             onRemove={onRemoveBlock}
             onUpdate={onUpdateBlock}
             onDragStart={onDragStart}
