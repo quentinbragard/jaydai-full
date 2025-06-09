@@ -103,7 +103,7 @@ const handleTemplateComplete = useCallback((finalContent: string) => {
 }, []);
 
 // Updated useTemplate function with cross-platform support
-const useTemplate = useCallback((template: Template) => {
+const useTemplate = useCallback(async (template: Template) => {
   // Validation
   if (!template) {
     toast.error('Invalid template data');
