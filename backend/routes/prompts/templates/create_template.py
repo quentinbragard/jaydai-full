@@ -3,7 +3,7 @@ from typing import Optional
 from models.prompts.templates import TemplateCreate, TemplateResponse
 from models.common import APIResponse
 from utils import supabase_helpers
-from utils.prompts import process_template_for_response, expand_template_blocks, validate_block_access, normalize_localized_field
+from utils.prompts import process_template_for_response, validate_block_access, normalize_localized_field
 from utils.access_control import get_user_metadata
 from . import router, supabase
 
@@ -25,8 +25,6 @@ async def _validate_template_blocks(template: TemplateCreate, user_id: str) -> N
             metadata_blocks.extend(template.metadata.examples)
         if template.metadata.constraints:
             metadata_blocks.extend(template.metadata.constraints)
-        if template.metadata.thinking_steps:
-            metadata_blocks.extend(template.metadata.thinking_steps)
             
         all_block_ids.update(bid for bid in metadata_blocks if bid and bid != 0)
     
@@ -109,9 +107,8 @@ async def create_template(
         # Process and return the created template
         created_template = response.data[0]
         processed_template = process_template_for_response(created_template, "en")
-        expanded_template = await expand_template_blocks(processed_template, "en")
-        
-        return APIResponse(success=True, data=expanded_template)
+
+        return APIResponse(success=True, data=processed_template)
         
     except HTTPException:
         raise

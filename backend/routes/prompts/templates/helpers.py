@@ -6,7 +6,6 @@ import os
 from utils import supabase_helpers
 from utils.prompts import (
     process_template_for_response,
-    expand_template_blocks,
     validate_block_access,
     normalize_localized_field
 )
@@ -47,7 +46,7 @@ async def get_user_company(user_id: str) -> Optional[str]:
         return None
     
 
-async def get_user_templates(user_id: str, locale: str = "en", expand_blocks: bool = True):
+async def get_user_templates(user_id: str, locale: str = "en"):
     """Get user's personal templates."""
     try:
         # Get user templates
@@ -57,11 +56,7 @@ async def get_user_templates(user_id: str, locale: str = "en", expand_blocks: bo
         for template_data in (response.data or []):
             # Process template for response
             processed_template = process_template_for_response(template_data, locale)
-            
-            # Expand blocks if requested
-            if expand_blocks:
-                processed_template = await expand_template_blocks(processed_template, locale)
-            
+
             templates.append(processed_template)
         
         return templates
@@ -69,7 +64,7 @@ async def get_user_templates(user_id: str, locale: str = "en", expand_blocks: bo
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error retrieving user templates: {str(e)}")
 
-async def get_official_templates(user_id: Optional[str] = None, locale: str = "en", expand_blocks: bool = True):
+async def get_official_templates(user_id: Optional[str] = None, locale: str = "en"):
     """
     Get official prompt templates.
     Official templates now include:
@@ -104,11 +99,7 @@ async def get_official_templates(user_id: Optional[str] = None, locale: str = "e
         for template_data in templates:
             # Process template for response
             processed_template = process_template_for_response(template_data, locale)
-            
-            # Expand blocks if requested
-            if expand_blocks:
-                processed_template = await expand_template_blocks(processed_template, locale)
-            
+
             processed_templates.append(processed_template)
         
         return processed_templates
@@ -117,7 +108,7 @@ async def get_official_templates(user_id: Optional[str] = None, locale: str = "e
         raise HTTPException(status_code=500, detail=f"Error retrieving official templates: {str(e)}")
     
     
-async def get_company_templates(user_id: Optional[str] = None, locale: str = "en", expand_blocks: bool = True):
+async def get_company_templates(user_id: Optional[str] = None, locale: str = "en"):
     """Get company templates for the user's company."""
     try:
         company_id = None
@@ -136,11 +127,7 @@ async def get_company_templates(user_id: Optional[str] = None, locale: str = "en
         for template_data in (response.data or []):
             # Process template for response
             processed_template = process_template_for_response(template_data, locale)
-            
-            # Expand blocks if requested
-            if expand_blocks:
-                processed_template = await expand_template_blocks(processed_template, locale)
-            
+
             templates.append(processed_template)
         
         return templates
@@ -148,13 +135,13 @@ async def get_company_templates(user_id: Optional[str] = None, locale: str = "en
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error retrieving company templates: {str(e)}")
 
-async def get_all_templates(user_id: str, locale: str = "en", expand_blocks: bool = True):
+async def get_all_templates(user_id: str, locale: str = "en"):
     """Get templates organized by type (official, company, and user)."""
     #try:
     # Get all template types
-    user_templates = await get_user_templates(user_id, locale, expand_blocks)
-    official_templates = await get_official_templates(user_id, locale, expand_blocks)
-    company_templates = await get_company_templates(user_id, locale, expand_blocks)
+    user_templates = await get_user_templates(user_id, locale)
+    official_templates = await get_official_templates(user_id, locale)
+    company_templates = await get_company_templates(user_id, locale)
     
     # Combine all templates
     all_templates = user_templates + official_templates + company_templates

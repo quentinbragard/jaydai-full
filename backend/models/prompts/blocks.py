@@ -12,7 +12,6 @@ class BlockType(str, Enum):
     AUDIENCE = "audience"
     EXAMPLE = "example"
     CONSTRAINT = "constraint"
-    THINKING_STEP = "thinking_step"
     CUSTOM = "custom"
     
 
