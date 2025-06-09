@@ -1,0 +1,62 @@
+{
+  "manifest_version": 3,
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvneO+KCb6Mw9KTmGgC9Ds19UZUF13PlIPnLV8sc2X8FDzMOPLH6vO92ELpFJDXk6kxrmNv/Pmwj2zbPlVMbSVZ+3odxeUSpA7wxrVSiHbTTJNSCW52M2vhNumRiSLRk4eU+d+Cgom3qtZtxiYS/yOyovPqS8Xspw2sgx+7eg/GcQ95Q+RYzNa8xDLneXXlfUH4H/INMyg72fg/oc5UMqOwPurGQ1IG5EiLv4AiQDtesCR3y+nxpVAaCd02fRptTzc1ctULQYHLBloRyVQmHSXUOPKtM81HHLKS2iupshnQdq66KX7qb5vP3+Q64KVyTBXye4OB4aMLrvKhdh6KB//wIDAQAB",
+  "name": "__MSG_appName__",
+  "version": "1.0.6",
+  "description": "__MSG_appDesc__",
+  "default_locale": "fr",
+  "permissions": [
+    "storage",
+    "identity",
+    "contextMenus"
+  ],
+  "oauth2": {
+    "client_id": "32108269805-53if057t0kgq0qlmjqr3st6v124cajam.apps.googleusercontent.com",
+    "scopes": ["openid", "email", "profile"]
+  },
+  "background": {
+      "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://chatgpt.com/*", "https://claude.ai/*", "https://chat.mistral.ai/*", "https://copilot.microsoft.com/*"],
+    "js": ["content.js"],
+      "run_at": "document_start",
+      "type": "module"
+    }
+  ],
+  "action": {
+      "default_popup": "popup.html",
+      "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+      }
+  },
+  "commands": {
+    "create-prompt": {
+      "suggested_key": { "default": "Ctrl+Shift+Y" },
+      "description": "Create a Jaydai Block"
+    },
+    "insert-prompt": {
+      "suggested_key": { "default": "Ctrl+Shift+U" },
+      "description": "Insert a Jaydai Block"
+    }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "assets/popup.css",
+        "assets/welcome.css",
+        "assets/content.css",
+        "welcome.js",
+        "popup.js",
+        "assets/*",
+        "networkInterceptor.js",
+        "applicationInitializer.js",
+        "images/*"
+      ],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}
