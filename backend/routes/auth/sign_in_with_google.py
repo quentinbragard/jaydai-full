@@ -24,21 +24,18 @@ async def sign_in_with_google(google_sign_in_data: GoogleAuthRequest):
         if not metadata_response.data:
             user_email = response.user.email
             user_name = response.user.user_metadata.get("full_name", "")
-            official_folder_ids = await get_all_folder_ids_by_type(supabase, "official")
-            organization_folder_ids = []
+
             metadata_response = supabase.table("users_metadata").insert({
                 "user_id": user_id,
                 "name": user_name,
                 "email": user_email,
                 "google_id": response.user.user_metadata.get("sub", ""),
-                "pinned_official_folder_ids": official_folder_ids,
-                "pinned_organization_folder_ids": organization_folder_ids,
+                "pinned_folder_ids": [],
             }).execute()
             metadata = metadata_response.data[0] if metadata_response.data else {
                 "name": user_name,
                 "email": user_email,
-                "pinned_official_folder_ids": official_folder_ids,
-                "pinned_organization_folder_ids": organization_folder_ids,
+                "pinned_folder_ids": [],
             }
             await NotificationService.create_welcome_notification(response.user.id, user_name)
         else:

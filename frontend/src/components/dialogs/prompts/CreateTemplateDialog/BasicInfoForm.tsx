@@ -3,8 +3,9 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { FolderPlus } from 'lucide-react';
+import { useDialogActions } from '@/hooks/dialogs/useDialogActions';
 import { getMessage } from '@/core/utils/i18n';
-import { FolderData, truncateFolderPath } from '@/components/prompts/templates/templateUtils';
+import { FolderData, truncateFolderPath } from '@/utils/prompts/templateUtils';
 
 interface Props {
   name: string;
@@ -27,8 +28,32 @@ export const BasicInfoForm: React.FC<Props> = ({
   userFoldersList,
   validationErrors
 }) => {
+  // Defensive programming: ensure userFoldersList is always an array
+  const safeFoldersList = Array.isArray(userFoldersList) ? userFoldersList : [];
+  const { openCreateFolder } = useDialogActions();
+
+  // Pre-render folder items so they can be inserted before the "create new" action
+  const folderListItems = safeFoldersList.map(folder => (
+    <SelectItem
+      key={folder.id}
+      value={folder.id.toString()}
+      className="jd-truncate"
+      title={folder.fullPath}
+    >
+      {folder.fullPath}
+    </SelectItem>
+  ));
+
+  const onFolderChange = (value: string) => {
+    if (value === 'new') {
+      openCreateFolder({});
+      return;
+    }
+    handleFolderSelect(value);
+  };
+
   return (
-    <div className="jd-grid jd-grid-cols-1 md:jd-grid-cols-3 jd-gap-4">
+    <div className="jd-grid jd-grid-cols-1 md:jd-grid-cols-3 jd-gap-4 jd-mb-4">
       <div>
         <label className="jd-text-sm jd-font-medium">{getMessage('templateName')}</label>
         <Input
@@ -58,7 +83,7 @@ export const BasicInfoForm: React.FC<Props> = ({
       </div>
       <div>
         <label className="jd-text-sm jd-font-medium">{getMessage('folder')}</label>
-        <Select value={selectedFolderId || 'root'} onValueChange={handleFolderSelect}>
+        <Select value={selectedFolderId || 'root'} onValueChange={onFolderChange}>
           <SelectTrigger className="jd-w-full jd-mt-1">
             <SelectValue placeholder={getMessage('selectFolder')}>
               {selectedFolderId === 'root' ? (
@@ -66,7 +91,7 @@ export const BasicInfoForm: React.FC<Props> = ({
               ) : selectedFolderId ? (
                 <span className="jd-truncate">
                   {truncateFolderPath(
-                    userFoldersList.find(f => f.id.toString() === selectedFolderId)?.fullPath || ''
+                    safeFoldersList.find(f => f.id.toString() === selectedFolderId)?.fullPath || ''
                   )}
                 </span>
               ) : null}
@@ -76,16 +101,8 @@ export const BasicInfoForm: React.FC<Props> = ({
             <SelectItem value="root">
               <span className="jd-text-muted-foreground">{getMessage('noFolder')}</span>
             </SelectItem>
-            {userFoldersList.map(folder => (
-              <SelectItem
-                key={folder.id}
-                value={folder.id.toString()}
-                className="jd-truncate"
-                title={folder.fullPath}
-              >
-                {folder.fullPath}
-              </SelectItem>
-            ))}
+            {/* Folder list should appear before the create folder action */}
+            {folderListItems}
             <SelectItem value="new" className="jd-text-primary jd-font-medium">
               <div className="jd-flex jd-items-center">
                 <FolderPlus className="jd-h-4 jd-w-4 jd-mr-2" />

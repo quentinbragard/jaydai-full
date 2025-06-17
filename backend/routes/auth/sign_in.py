@@ -22,8 +22,7 @@ async def sign_in(sign_in_data: SignInData):
             "additional_email": None,
             "phone_number": None,
             "additional_organization": None,
-            "pinned_official_folder_ids": [],
-            "pinned_organization_folder_ids": [],
+            "pinned_folder_ids": [],
         }
         user_with_metadata = {**response.user.__dict__, "metadata": metadata}
         return {

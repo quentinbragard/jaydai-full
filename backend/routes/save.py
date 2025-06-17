@@ -34,8 +34,7 @@ class UserMetadataData(BaseModel):
     user_id: Optional[str] = None
     name: Optional[str] = None
     phone_number: Optional[str] = None
-    pinned_official_folder_ids: Optional[List[str]] = None
-    pinned_organization_folder_ids: Optional[List[str]] = None
+    pinned_folder_ids: Optional[List[str]] = None
     preferences_metadata: Optional[Dict[str, Any]] = None
     additional_email: Optional[str] = None
     additional_organization: Optional[str] = None

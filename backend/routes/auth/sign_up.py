@@ -15,12 +15,9 @@ async def sign_up(sign_up_data: SignUpData):
         })
         user_with_metadata = None
         if response.user:
-            official_folder_ids = await get_all_folder_ids_by_type(supabase, "official")
-            organization_folder_ids = []
             metadata_response = supabase.table("users_metadata").insert({
                 "user_id": response.user.id,
-                "pinned_official_folder_ids": official_folder_ids,
-                "pinned_organization_folder_ids": organization_folder_ids,
+                "pinned_folder_ids": [],
                 "name": sign_up_data.name,
                 "additional_email": None,
                 "phone_number": None,

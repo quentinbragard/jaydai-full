@@ -24,15 +24,14 @@ class UserMetadata(BaseModel):
     phone_number: str | None = None
     additional_organization: str | None = None
     company_id: str | None = None
-    pinned_official_folder_ids: list[int] | None = None
-    pinned_organization_folder_ids: list[int] | None = None
+    pinned_folder_ids: list[int] | None = None
 
 @router.get("/metadata")
 async def get_user_metadata(user_id: str = Depends(supabase_helpers.get_user_from_session_token)):
     """Get metadata for a specific user."""
     try:
         response = supabase.table("users_metadata") \
-            .select("name, additional_email, phone_number, additional_organization, company_id, pinned_official_folder_ids, pinned_organization_folder_ids") \
+            .select("name, additional_email, phone_number, additional_organization, company_id, pinned_folder_ids") \
             .eq("user_id", user_id) \
             .single() \
             .execute()
@@ -46,8 +45,7 @@ async def get_user_metadata(user_id: str = Depends(supabase_helpers.get_user_fro
                     "phone_number": None,
                     "additional_organization": None,
                     "company_id": None,
-                    "pinned_official_folder_ids": [],
-                    "pinned_organization_folder_ids": []
+                    "pinned_folder_ids": []
                 }
             }
             
@@ -100,11 +98,8 @@ async def update_user_metadata(metadata: UserMetadata, user_id: str = Depends(su
                 update_data["pinned_organization_folder_ids"] = organization_folder_ids
         
         # Handle explicit updates to pinned folder IDs (only if provided)
-        if metadata.pinned_official_folder_ids is not None:
-            update_data["pinned_official_folder_ids"] = metadata.pinned_official_folder_ids
-            
-        if metadata.pinned_organization_folder_ids is not None:
-            update_data["pinned_organization_folder_ids"] = metadata.pinned_organization_folder_ids
+        if metadata.pinned_folder_ids is not None:
+            update_data["pinned_folder_ids"] = metadata.pinned_folder_ids
         
         # Only proceed if there are changes to make
         if update_data:
@@ -143,14 +138,16 @@ async def get_folders_with_prompts(
     try:
         # Get user metadata for pinned folders
         metadata = supabase.table("users_metadata") \
-            .select("pinned_official_folder_ids, pinned_organization_folder_ids, company_id") \
+            .select("pinned_folder_ids, company_id") \
             .eq("user_id", user_id) \
             .single() \
             .execute()
             
-        pinned_official_folders = metadata.data.get('pinned_official_folder_ids', []) if metadata.data else []
-        pinned_org_folders = metadata.data.get('pinned_organization_folder_ids', []) if metadata.data else []
-        user_org_id = metadata.data.get('organization_id') if metadata.data else None
+        # Get the unified pinned folder IDs list
+        pinned_folder_ids = metadata.data.get('pinned_folder_ids', []) if metadata.data else []
+        user_company_id = metadata.data.get('company_id') if metadata.data else None
+        
+        print(f"Debug: Found pinned folder IDs for user {user_id}: {pinned_folder_ids}")
 
         # Get all prompts
         prompts = supabase.table("prompt_templates") \
@@ -158,25 +155,26 @@ async def get_folders_with_prompts(
             .execute()
 
         # Get folders from unified table
-        # Official folders
+        # Official folders (type = 'official')
         official_folders_response = supabase.table("prompt_folders") \
             .select("*") \
-            .is_("user_id", "null") \
-            .is_("company_id", "null") \
+            .eq("type", "official") \
             .execute()
         
-        # Organization folders (for user's organization)
-        org_folders_response = None
-        if user_org_id:
-            org_folders_response = supabase.table("prompt_folders") \
+        # Organization/Company folders (type = 'organization' or 'company')
+        company_folders_response = None
+        if user_company_id:
+            company_folders_response = supabase.table("prompt_folders") \
                 .select("*") \
-                .eq("company_id", user_org_id) \
+                .eq("company_id", user_company_id) \
+                .in_("type", ["organization", "company"]) \
                 .execute()
         
-        # User folders
+        # User folders (type = 'user')
         user_folders_response = supabase.table("prompt_folders") \
             .select("*") \
             .eq("user_id", user_id) \
+            .eq("type", "user") \
             .execute()
 
         # Organize prompts by folder and type
@@ -198,26 +196,31 @@ async def get_folders_with_prompts(
                     folder_prompts.append(processed_prompt)
                     
             processed_folder["prompts"] = folder_prompts
-            processed_folder["is_pinned"] = folder["id"] in pinned_official_folders
+            # Check if this folder is pinned using the unified list
+            processed_folder["is_pinned"] = folder["id"] in pinned_folder_ids
             organized_folders["official"].append(processed_folder)
 
-        # Process organization folders
-        if org_folders_response:
-            for folder in org_folders_response.data or []:
+        # Process organization/company folders
+        if company_folders_response:
+            for folder in company_folders_response.data or []:
                 processed_folder = process_folder_for_response(folder, locale)
                 
                 # Process prompts for this folder
                 folder_prompts = []
                 for p in prompts.data or []:
-                    if p.get("folder_id") == folder["id"] and p.get("type") == "organization":
+                    # Check for both 'organization' and 'company' type templates
+                    if (p.get("folder_id") == folder["id"] and 
+                        p.get("type") in ["organization", "company"]):
                         processed_prompt = process_template_for_response(p, locale)
                         folder_prompts.append(processed_prompt)
                         
                 processed_folder["prompts"] = folder_prompts
-                processed_folder["is_pinned"] = folder["id"] in pinned_org_folders
+                # Check if this folder is pinned using the unified list
+                processed_folder["is_pinned"] = folder["id"] in pinned_folder_ids
                 organized_folders["organization"].append(processed_folder)
 
-        # Process user folders
+        # Process user folders + root templates
+        # First, handle folders with IDs
         for folder in user_folders_response.data or []:
             processed_folder = process_folder_for_response(folder, locale)
             
@@ -229,7 +232,42 @@ async def get_folders_with_prompts(
                     folder_prompts.append(processed_prompt)
             
             processed_folder["prompts"] = folder_prompts
+            # User folders are never pinned (pinning only applies to official/org folders)
+            processed_folder["is_pinned"] = False
             organized_folders["user"].append(processed_folder)
+
+        # Handle root templates (user templates with no folder_id)
+        root_prompts = []
+        for p in prompts.data or []:
+            if (p.get("folder_id") is None and 
+                p.get("type") == "user" and 
+                p.get("user_id") == user_id):
+                processed_prompt = process_template_for_response(p, locale)
+                root_prompts.append(processed_prompt)
+        
+        # If there are root prompts, create a virtual root folder
+        if root_prompts:
+            virtual_root_folder = {
+                "id": 0,
+                "created_at": None,
+                "user_id": user_id,
+                "organization_id": None,
+                "parent_folder_id": None,
+                "content": {
+                    "en": "Root Templates",
+                    "fr": "Modèles Racine"
+                },
+                "description": "Templates not assigned to any folder",
+                "company_id": None,
+                "type": "user",
+                "name": "Root Templates",
+                "prompts": root_prompts,
+                "is_pinned": False
+            }
+            
+            # Add virtual root folder at the beginning
+            organized_folders["user"].insert(0, virtual_root_folder)
+            print(f"Debug: Added virtual root folder with {len(root_prompts)} templates")
 
         return {
             "success": True,
@@ -238,7 +276,6 @@ async def get_folders_with_prompts(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching folders with prompts: {str(e)}")
     
-
 @router.get("/onboarding/status")
 async def get_onboarding_status(user_id: str = Depends(supabase_helpers.get_user_from_session_token)):
     try:

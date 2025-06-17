@@ -1,24 +1,32 @@
 // src/components/dialogs/prompts/editors/AdvancedEditor/MetadataSection.tsx
-import React from 'react';
+import React, { useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { Plus, ChevronDown, ChevronUp, User, MessageSquare, Target, Users, Type, Layout, Palette, Ban } from 'lucide-react';
+import {
+  Plus,
+  ChevronDown,
+  ChevronUp,
+  User,
+  MessageSquare,
+  Target,
+  Users,
+  Type,
+  Layout,
+  Palette,
+  Ban
+} from 'lucide-react';
 import { cn } from '@/core/utils/classNames';
 import { useThemeDetector } from '@/hooks/useThemeDetector';
 
 import { MetadataCard } from '@/components/prompts/blocks/MetadataCard';
-import { MultipleMetadataCard } from '@/components/prompts/blocks/MultipleMetadataCard';
-import { 
-  PromptMetadata, 
-  MetadataType, 
-  SingleMetadataType,
-  MultipleMetadataType,
-  MetadataItem,
+import {
+  MetadataType,
   PRIMARY_METADATA,
   SECONDARY_METADATA,
-  METADATA_CONFIGS,
-  isMultipleMetadataType
+  METADATA_CONFIGS
 } from '@/types/prompts/metadata';
 import { Block } from '@/types/prompts/blocks';
+import { useTemplateEditor } from '../../TemplateEditorDialog/TemplateEditorContext';
+import { addSecondaryMetadata, removeSecondaryMetadata } from '@/utils/prompts/metadataUtils';
 
 const METADATA_ICONS: Record<MetadataType, React.ComponentType<any>> = {
   role: User,
@@ -33,65 +41,45 @@ const METADATA_ICONS: Record<MetadataType, React.ComponentType<any>> = {
 
 interface MetadataSectionProps {
   availableMetadataBlocks: Record<MetadataType, Block[]>;
-  metadata: PromptMetadata;
-  expandedMetadata: MetadataType | null;
-  setExpandedMetadata: (type: MetadataType | null) => void;
-  activeSecondaryMetadata: Set<MetadataType>;
-  metadataCollapsed: boolean;
-  setMetadataCollapsed: (collapsed: boolean) => void;
-  secondaryMetadataCollapsed: boolean;
-  setSecondaryMetadataCollapsed: (collapsed: boolean) => void;
-  onSingleMetadataChange: (type: SingleMetadataType, value: string) => void;
-  onCustomChange: (type: SingleMetadataType, value: string) => void;
-  onAddMetadataItem: (type: MultipleMetadataType) => void;
-  onRemoveMetadataItem: (type: MultipleMetadataType, itemId: string) => void;
-  onUpdateMetadataItem: (type: MultipleMetadataType, itemId: string, updates: Partial<MetadataItem>) => void;
-  onReorderMetadataItems: (type: MultipleMetadataType, newItems: MetadataItem[]) => void;
-  onAddSecondaryMetadata: (type: MetadataType) => void;
-  onRemoveSecondaryMetadata: (type: MetadataType) => void;
-  onSaveBlock: (block: Block) => void;
   showPrimary?: boolean;
   showSecondary?: boolean;
 }
 
 export const MetadataSection: React.FC<MetadataSectionProps> = ({
   availableMetadataBlocks,
-  metadata,
-  expandedMetadata,
-  setExpandedMetadata,
-  activeSecondaryMetadata,
-  metadataCollapsed,
-  setMetadataCollapsed,
-  secondaryMetadataCollapsed,
-  setSecondaryMetadataCollapsed,
-  onSingleMetadataChange,
-  onCustomChange,
-  onAddMetadataItem,
-  onRemoveMetadataItem,
-  onUpdateMetadataItem,
-  onReorderMetadataItems,
-  onAddSecondaryMetadata,
-  onRemoveSecondaryMetadata,
-  onSaveBlock,
   showPrimary = true,
   showSecondary = true
 }) => {
-  const isDarkMode = useThemeDetector();
+  const {
+    metadata,
+    setMetadata,
+    expandedMetadata,
+    toggleExpandedMetadata,
+    activeSecondaryMetadata,
+    metadataCollapsed,
+    setMetadataCollapsed,
+    secondaryMetadataCollapsed,
+    setSecondaryMetadataCollapsed
+  } = useTemplateEditor();
 
-  // Extract custom values from metadata for primary metadata
-  const customValues = React.useMemo(() => {
-    const values: Record<SingleMetadataType, string> = {} as Record<SingleMetadataType, string>;
-    PRIMARY_METADATA.forEach(type => {
-      values[type] = metadata.values?.[type] || '';
-    });
-    // Also include secondary single metadata
-    SECONDARY_METADATA.forEach(type => {
-      if (!isMultipleMetadataType(type)) {
-        values[type as SingleMetadataType] = metadata.values?.[type as SingleMetadataType] || '';
-      }
-    });
-    return values;
-  }, [metadata.values]);
+
+  const handleAddSecondaryMetadata = useCallback(
+    (type: MetadataType) => {
+      setMetadata(prev => addSecondaryMetadata(prev, type));
+      if (!expandedMetadata.has(type)) toggleExpandedMetadata(type);
+    },
+    [setMetadata, expandedMetadata, toggleExpandedMetadata]
+  );
+
+  const handleRemoveSecondaryMetadata = useCallback(
+    (type: MetadataType) => {
+      setMetadata(prev => removeSecondaryMetadata(prev, type));
+      if (expandedMetadata.has(type)) toggleExpandedMetadata(type);
+    },
+    [setMetadata, expandedMetadata, toggleExpandedMetadata]
+  );
+  
+  const isDarkMode = useThemeDetector();
 
   return (
     <>
@@ -117,16 +105,10 @@ export const MetadataSection: React.FC<MetadataSectionProps> = ({
                 <div key={type} className="jd-transform jd-transition-all jd-duration-300 hover:jd-scale-105">
                   <MetadataCard
                     type={type}
-                    icon={METADATA_ICONS[type]}
                     availableBlocks={availableMetadataBlocks[type] || []}
-                    expanded={expandedMetadata === type}
-                    selectedId={metadata[type] || 0}
-                    customValue={customValues[type] || ''}
+                    expanded={expandedMetadata.has(type)}
                     isPrimary
-                    onSelect={(v) => onSingleMetadataChange(type, v)}
-                    onCustomChange={(v) => onCustomChange(type, v)}
-                    onToggle={() => setExpandedMetadata(expandedMetadata === type ? null : type)}
-                    onSaveBlock={onSaveBlock}
+                    onToggle={() => toggleExpandedMetadata(type)}
                   />
                 </div>
               ))}
@@ -157,36 +139,13 @@ export const MetadataSection: React.FC<MetadataSectionProps> = ({
                 <div className="jd-grid jd-grid-cols-2 jd-gap-3 jd-mb-3">
                   {Array.from(activeSecondaryMetadata).map((type) => (
                     <div key={type} className="jd-transform jd-transition-all jd-duration-300 hover:jd-scale-105">
-                      {isMultipleMetadataType(type) ? (
-                        <MultipleMetadataCard
-                          type={type}
-                          icon={METADATA_ICONS[type]}
-                          availableBlocks={availableMetadataBlocks[type] || []}
-                          items={metadata[type] || []}
-                          expanded={expandedMetadata === type}
-                          onAddItem={() => onAddMetadataItem(type)}
-                          onRemoveItem={(itemId) => onRemoveMetadataItem(type, itemId)}
-                          onUpdateItem={(itemId, updates) => onUpdateMetadataItem(type, itemId, updates)}
-                          onToggle={() => setExpandedMetadata(expandedMetadata === type ? null : type)}
-                          onRemove={() => onRemoveSecondaryMetadata(type)}
-                          onSaveBlock={onSaveBlock}
-                          onReorderItems={(newItems) => onReorderMetadataItems(type, newItems)}
-                        />
-                      ) : (
-                        <MetadataCard
-                          type={type as SingleMetadataType}
-                          icon={METADATA_ICONS[type]}
-                          availableBlocks={availableMetadataBlocks[type] || []}
-                          expanded={expandedMetadata === type}
-                          selectedId={metadata[type as SingleMetadataType] || 0}
-                          customValue={customValues[type as SingleMetadataType] || ''}
-                          onSelect={(v) => onSingleMetadataChange(type as SingleMetadataType, v)}
-                          onCustomChange={(v) => onCustomChange(type as SingleMetadataType, v)}
-                          onToggle={() => setExpandedMetadata(expandedMetadata === type ? null : type)}
-                          onRemove={() => onRemoveSecondaryMetadata(type)}
-                          onSaveBlock={onSaveBlock}
-                        />
-                      )}
+                      <MetadataCard
+                        type={type}
+                        availableBlocks={availableMetadataBlocks[type] || []}
+                        expanded={expandedMetadata.has(type)}
+                        onToggle={() => toggleExpandedMetadata(type)}
+                        onRemove={() => handleRemoveSecondaryMetadata(type)}
+                      />
                     </div>
                   ))}
                 </div>
@@ -203,7 +162,7 @@ export const MetadataSection: React.FC<MetadataSectionProps> = ({
                         key={type}
                         variant="outline"
                         size="sm"
-                        onClick={() => onAddSecondaryMetadata(type)}
+                        onClick={() => handleAddSecondaryMetadata(type)}
                         className={cn(
                           'jd-flex jd-items-center jd-gap-1 jd-text-xs',
                           'jd-transition-all jd-duration-300',

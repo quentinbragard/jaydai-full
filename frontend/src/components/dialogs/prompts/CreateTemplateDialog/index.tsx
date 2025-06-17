@@ -1,77 +1,75 @@
-import React from 'react';
-import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { BaseDialog } from '@/components/dialogs/BaseDialog';
-import { BasicEditor, AdvancedEditor } from '../editors';
-import { BasicInfoForm } from './BasicInfoForm';
+// src/components/dialogs/prompts/CreateTemplateDialog/index.tsx
+import React, { useMemo } from 'react';
+import { getMessage } from '@/core/utils/i18n';
 import { useCreateTemplateDialog } from '@/hooks/dialogs/useCreateTemplateDialog';
+import { TemplateEditorDialog } from '../TemplateEditorDialog';
+import { BasicInfoForm } from './BasicInfoForm';
+import { processUserFolders } from '@/utils/prompts/templateUtils';
+import { useUserFolders } from '@/hooks/prompts';
+
 
 export const CreateTemplateDialog: React.FC = () => {
-  const dialog = useCreateTemplateDialog();
+  const hook = useCreateTemplateDialog();
+  const { data: fetchedUserFolders = [] } = useUserFolders();
 
-  if (!dialog.isOpen) return null;
+  // Choose folders from dialog data if available, otherwise fallback to fetched data
+  const foldersSource = hook.data?.userFolders && hook.data.userFolders.length > 0
+    ? hook.data.userFolders
+    : fetchedUserFolders;
+
+  // Process user folders using useMemo for performance
+  const userFoldersList = useMemo(() => {
+    return processUserFolders(foldersSource);
+  }, [foldersSource]);
+
+  const infoForm = hook.isOpen && (
+    <BasicInfoForm
+      name={hook.name}
+      setName={hook.setName}
+      description={hook.description}
+      setDescription={hook.setDescription}
+      selectedFolderId={hook.selectedFolderId}
+      handleFolderSelect={hook.setSelectedFolderId}
+      userFoldersList={userFoldersList}
+      validationErrors={hook.validationErrors}
+    />
+  );
 
   return (
-    <BaseDialog
-      open={dialog.isOpen}
-      onOpenChange={open => {
-        if (!open) dialog.handleClose();
-      }}
-      title={dialog.dialogTitle}
-      className="jd-max-w-4xl jd-h-[80vh]"
-    >
-      <div className="jd-flex jd-flex-col jd-h-full jd-gap-4">
-        <BasicInfoForm
-          name={dialog.name}
-          setName={dialog.setName}
-          description={dialog.description}
-          setDescription={dialog.setDescription}
-          selectedFolderId={dialog.selectedFolderId}
-          handleFolderSelect={dialog.handleFolderSelect}
-          userFoldersList={dialog.userFoldersList}
-          validationErrors={dialog.validationErrors}
-        />
-
-        <Tabs
-          value={dialog.activeTab}
-          onValueChange={value => dialog.setActiveTab(value as 'basic' | 'advanced')}
-          className="jd-flex-1 jd-flex jd-flex-col"
-        >
-          <TabsList className="jd-grid jd-w-full jd-grid-cols-2">
-            <TabsTrigger value="basic">Basic Editor</TabsTrigger>
-            <TabsTrigger value="advanced">Advanced Editor</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="basic" className="jd-flex-1 jd-overflow-y-auto jd-mt-4">
-            <BasicEditor blocks={dialog.blocks} onUpdateBlock={dialog.handleUpdateBlock} mode="create" />
-          </TabsContent>
-
-          <TabsContent value="advanced" className="jd-flex-1 jd-overflow-y-auto jd-mt-4">
-            <AdvancedEditor
-              content={dialog.content}
-              metadata={dialog.metadata}
-              onContentChange={dialog.setContent}
-              onUpdateMetadata={dialog.handleUpdateMetadata}
-            />
-          </TabsContent>
-        </Tabs>
-
-        <div className="jd-flex jd-justify-end jd-gap-2 jd-pt-4 jd-border-t">
-          <Button variant="outline" onClick={dialog.handleClose} disabled={dialog.isSubmitting}>
-            Cancel
-          </Button>
-          <Button onClick={dialog.handleSave} disabled={dialog.isSubmitting}>
-            {dialog.isSubmitting ? (
-              <>
-                <div className="jd-h-4 jd-w-4 jd-border-2 jd-border-current jd-border-t-transparent jd-animate-spin jd-rounded-full jd-inline-block jd-mr-2"></div>
-                Create
-              </>
-            ) : (
-              dialog.dialogTitle
-            )}
-          </Button>
-        </div>
-      </div>
-    </BaseDialog>
+    <TemplateEditorDialog
+      // State
+      isOpen={hook.isOpen}
+      error={hook.error}
+      metadata={hook.metadata}
+      isProcessing={hook.isProcessing}
+      content={hook.content}
+      activeTab={hook.activeTab}
+      isSubmitting={hook.isSubmitting}
+      
+      // Actions
+      setContent={hook.setContent}
+      setActiveTab={hook.setActiveTab}
+      handleComplete={hook.handleComplete}
+      handleClose={hook.handleClose}
+      
+      // Metadata update
+      setMetadata={hook.setMetadata}
+      
+      // UI state
+      expandedMetadata={hook.expandedMetadata}
+      toggleExpandedMetadata={hook.toggleExpandedMetadata}
+      activeSecondaryMetadata={hook.activeSecondaryMetadata}
+      metadataCollapsed={hook.metadataCollapsed}
+      setMetadataCollapsed={hook.setMetadataCollapsed}
+      secondaryMetadataCollapsed={hook.secondaryMetadataCollapsed}
+      setSecondaryMetadataCollapsed={hook.setSecondaryMetadataCollapsed}
+      customValues={hook.customValues}
+      
+      // Config
+      dialogTitle={hook.dialogTitle}
+      dialogDescription={getMessage('CreateTemplateDialogDescription', undefined, 'Build your prompt using metadata and content')}
+      mode={hook.isEditMode ? 'edit' : 'create'}
+      infoForm={infoForm}
+    />
   );
 };

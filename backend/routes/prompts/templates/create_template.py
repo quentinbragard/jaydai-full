@@ -21,10 +21,10 @@ async def _validate_template_blocks(template: TemplateCreate, user_id: str) -> N
             template.metadata.audience,
         ]
         # Add any list-based metadata blocks
-        if template.metadata.examples:
-            metadata_blocks.extend(template.metadata.examples)
-        if template.metadata.constraints:
-            metadata_blocks.extend(template.metadata.constraints)
+        if template.metadata.example:
+            metadata_blocks.extend(template.metadata.example)
+        if template.metadata.constraint:
+            metadata_blocks.extend(template.metadata.constraint)
             
         all_block_ids.update(bid for bid in metadata_blocks if bid and bid != 0)
     

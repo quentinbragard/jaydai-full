@@ -34,7 +34,7 @@ def generate_personalized_insights(
                 "type": "prompt_optimization",
                 "title": "Try More Specific Prompts",
                 "description": "Your prompts tend to be very brief. Adding more specific instructions and context could help you get more detailed and accurate responses.",
-                "action": "prompt_examples"
+                "action": "prompt_example"
             })
         elif prompt_lengths.get("median", 0) > 500:
             insights.append({
@@ -54,7 +54,7 @@ def generate_personalized_insights(
                 "type": "conversation_flow",
                 "title": "Engage in Deeper Conversations",
                 "description": "Your conversations tend to be brief. Follow-up questions can help you get more comprehensive information and explore topics more thoroughly.",
-                "action": "conversation_examples"
+                "action": "conversation_example"
             })
         elif response_quality.get("max_conversation_depth", 0) > 10:
             insights.append({
@@ -127,7 +127,7 @@ def generate_personalized_insights(
                 "type": "coding_pattern",
                 "title": "Expand Your Code Requests",
                 "description": "You're getting code snippets, but they tend to be brief. For more complete solutions, try asking for full implementations with error handling and comments.",
-                "action": "code_prompt_examples"
+                "action": "code_prompt_example"
             })
         elif code_stats.get("total_snippets", 0) > 20:
             insights.append({

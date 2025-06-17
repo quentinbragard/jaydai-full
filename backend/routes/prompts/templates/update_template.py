@@ -44,10 +44,10 @@ async def update_template(
                     template.metadata.output_format or 0,
                     template.metadata.audience or 0,
                 ]
-                if template.metadata.examples:
-                    metadata_block_ids.extend(template.metadata.examples)
-                if template.metadata.constraints:
-                    metadata_block_ids.extend(template.metadata.constraints)
+                if template.metadata.example:
+                    metadata_block_ids.extend(template.metadata.example)
+                if template.metadata.constraint:
+                    metadata_block_ids.extend(template.metadata.constraint)
                 metadata_block_ids = [bid for bid in metadata_block_ids if bid and bid != 0]
 
             if metadata_block_ids:

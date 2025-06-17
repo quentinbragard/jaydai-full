@@ -18,7 +18,7 @@ import {
   getBlockIconColors,
   BLOCK_TYPE_LABELS,
   getLocalizedContent
-} from '@/components/prompts/blocks/blockUtils';
+} from '@/utils/prompts/blockUtils';
 import { BlockItem } from './BlockItem';
 import { useBlocks } from './useBlocks';
 import { useBlockInsertion } from './useBlockInsertion';
@@ -30,8 +30,8 @@ const QUICK_FILTERS = [
   { type: 'role', label: 'Role', icon: '👤' },
   { type: 'context', label: 'Context', icon: '📝' },
   { type: 'goal', label: 'Goal', icon: '🎯' },
-  { type: 'example', label: 'Examples', icon: '💡' },
-  { type: 'constraint', label: 'Constraints', icon: '🚫' },
+  { type: 'example', label: 'Example', icon: '💡' },
+  { type: 'constraint', label: 'Constraint', icon: '🚫' },
 ] as const;
 
 interface QuickBlockSelectorProps {

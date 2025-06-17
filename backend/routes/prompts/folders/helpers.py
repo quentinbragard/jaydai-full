@@ -3,7 +3,6 @@ from pydantic import BaseModel
 from supabase import create_client, Client
 from utils import supabase_helpers
 from utils.prompts import (
-    fetch_folders_by_type,
     fetch_templates_for_folders,
     organize_templates_by_folder,
     add_templates_to_folders,

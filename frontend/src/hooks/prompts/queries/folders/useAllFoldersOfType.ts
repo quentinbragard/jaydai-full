@@ -6,21 +6,21 @@ import { QUERY_KEYS } from '@/constants/queryKeys';
 import { TemplateFolder } from '@/types/prompts/templates';
 
 /**
- * Hook to fetch all folders of a specific type (official or organization)
+ * Hook to fetch all folders of a specific type (official, organization or mixed)
  */
-export function useAllFoldersOfType(folderType: 'official' | 'organization') {
+export function useAllFoldersOfType(folderType: 'official' | 'organization' | 'mixed') {
   const userLocale = getCurrentLanguage();
   
   return useQuery(
     [QUERY_KEYS.ALL_FOLDERS, folderType], // Query key array with type
     async () => {
-      const response = await promptApi.getAllFolders(folderType, false, userLocale);
+      const response = await promptApi.getFolders(folderType, true, true, userLocale);
 
       if (!response.success) {
         throw new Error(response.message || `Failed to fetch ${folderType} folders`);
       }
 
-      return response.data as TemplateFolder[];
+      return (response.data.folders[folderType] || []) as TemplateFolder[];
     },
     {
       refetchOnWindowFocus: false,

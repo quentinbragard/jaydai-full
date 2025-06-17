@@ -13,8 +13,8 @@ class TemplateMetadata(BaseModel):
     tone_style: Optional[int] = None
     output_format: Optional[int] = None
     audience: Optional[int] = None
-    examples: Optional[List[int]] = None
-    constraints: Optional[List[int]] = None
+    example: Optional[List[int]] = None
+    constraint: Optional[List[int]] = None
 
 class TemplateBase(BaseModel):
     title: Union[str, Dict[str, str]]

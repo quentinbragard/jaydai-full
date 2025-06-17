@@ -13,7 +13,6 @@ from .locales import (
 from .folders import (
     determine_folder_type,
     process_folder_for_response,
-    fetch_folders_by_type,
     get_user_pinned_folders,
     update_user_pinned_folders,
     get_all_folder_ids_by_type,

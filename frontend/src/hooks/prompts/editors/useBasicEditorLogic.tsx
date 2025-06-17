@@ -1,7 +1,5 @@
-// src/components/dialogs/prompts/editors/BasicEditor/hooks/useBasicEditorLogic.ts
+// src/hooks/prompts/editors/useBasicEditorLogic.tsx
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Block } from '@/types/prompts/blocks';
-import { getCurrentLanguage } from '@/core/utils/i18n';
 import {
   highlightPlaceholders,
   extractPlaceholders,
@@ -15,14 +13,14 @@ interface Placeholder {
 }
 
 interface UseBasicEditorLogicProps {
-  blocks: Block[];
-  onUpdateBlock: (blockId: number, updatedBlock: Partial<Block>) => void;
+  content: string;
+  onContentChange: (content: string) => void;
   mode: 'create' | 'customize';
 }
 
 export function useBasicEditorLogic({
-  blocks,
-  onUpdateBlock,
+  content,
+  onContentChange,
   mode
 }: UseBasicEditorLogicProps) {
   // State
@@ -38,64 +36,48 @@ export function useBasicEditorLogic({
   const activeInputIndex = useRef<number | null>(null);
   const initialContentRef = useRef('');
 
-  // Get combined content from all blocks
-  const getBlockContent = useCallback((block: Block): string => {
-    if (typeof block.content === 'string') {
-      return block.content;
-    } else if (block.content && typeof block.content === 'object') {
-      const locale = getCurrentLanguage();
-      return block.content[locale] || block.content.en || Object.values(block.content)[0] || '';
-    }
-    return '';
-  }, []);
-
-  const templateContent = mode === 'customize' && initialContentRef.current
-    ? initialContentRef.current
-    : blocks.map(block => getBlockContent(block)).join('\n\n');
-
   // Initialize content and placeholders
   useEffect(() => {
-    const currentEffectiveContent = templateContent ? templateContent.replace(/\r\n/g, '\n') : "";
+    const normalizedContent = content ? content.replace(/\r\n/g, '\n') : '';
 
     if (mode === 'customize') {
-      if (initialContentRef.current && initialContentRef.current !== "") {
-        if (modifiedContent !== currentEffectiveContent) {
-          setModifiedContent(currentEffectiveContent);
-        }
-        if (placeholders.length === 0 && currentEffectiveContent) {
-          const extracted = extractPlaceholders(currentEffectiveContent);
-          setPlaceholders(extracted);
-        }
-      } else {
-        setModifiedContent(currentEffectiveContent);
-        const extractedPlaceholders = extractPlaceholders(currentEffectiveContent);
-        setPlaceholders(extractedPlaceholders);
-        if (!initialContentRef.current && currentEffectiveContent) {
-          initialContentRef.current = currentEffectiveContent;
-        }
+      // For customize mode, extract placeholders and set up highlighting
+      if (initialContentRef.current === '' && normalizedContent) {
+        initialContentRef.current = normalizedContent;
+      }
+      
+      if (modifiedContent !== normalizedContent) {
+        setModifiedContent(normalizedContent);
+      }
+      
+      if (placeholders.length === 0 && normalizedContent) {
+        const extracted = extractPlaceholders(normalizedContent);
+        setPlaceholders(extracted);
       }
     } else {
+      // For create mode, just set the content
       if (!contentMounted) {
-        setModifiedContent(currentEffectiveContent);
-        if (!initialContentRef.current && currentEffectiveContent) {
-          initialContentRef.current = currentEffectiveContent;
+        setModifiedContent(normalizedContent);
+        if (!initialContentRef.current && normalizedContent) {
+          initialContentRef.current = normalizedContent;
         }
-      } else if (!isEditing && modifiedContent !== currentEffectiveContent) {
-        setModifiedContent(currentEffectiveContent);
+      } else if (!isEditing && modifiedContent !== normalizedContent) {
+        setModifiedContent(normalizedContent);
       }
     }
 
+    // Update editor display
     const timeoutId = setTimeout(() => {
       if (editorRef.current) {
         if (mode === 'customize') {
           if (!contentMounted) {
-            editorRef.current.innerHTML = highlightPlaceholders(currentEffectiveContent);
+            editorRef.current.innerHTML = highlightPlaceholders(normalizedContent);
           }
         } else {
           if (!contentMounted) {
-            editorRef.current.textContent = currentEffectiveContent;
-          } else if (!isEditing && editorRef.current.textContent !== currentEffectiveContent) {
-            editorRef.current.textContent = currentEffectiveContent;
+            editorRef.current.innerHTML = normalizedContent.replace(/\n/g, '<br>');
+          } else if (!isEditing && editorRef.current.innerText !== normalizedContent) {
+            editorRef.current.innerHTML = normalizedContent.replace(/\n/g, '<br>');
           }
         }
 
@@ -106,9 +88,9 @@ export function useBasicEditorLogic({
     }, 0);
 
     return () => clearTimeout(timeoutId);
-  }, [templateContent, mode, contentMounted, isEditing, modifiedContent, placeholders.length]);
+  }, [content, mode, contentMounted, isEditing, modifiedContent, placeholders.length]);
 
-  // Setup mutation observer
+  // Setup mutation observer for customize mode
   useEffect(() => {
     if (!contentMounted || !editorRef.current || mode === 'create') {
       if (observerRef.current) observerRef.current.disconnect();
@@ -133,9 +115,7 @@ export function useBasicEditorLogic({
           }
         }
         
-        if (blocks.length > 0) {
-          onUpdateBlock(blocks[0].id, { content: textContent });
-        }
+        onContentChange(textContent);
       }
     });
 
@@ -152,7 +132,7 @@ export function useBasicEditorLogic({
         observerRef.current = null;
       }
     };
-  }, [contentMounted, blocks, onUpdateBlock, mode, isEditing, modifiedContent, placeholders]);
+  }, [contentMounted, onContentChange, mode, isEditing, modifiedContent, placeholders]);
 
   // Event handlers
   const handleEditorFocus = useCallback(() => {
@@ -166,9 +146,7 @@ export function useBasicEditorLogic({
     setIsEditing(false);
     if (editorRef.current) {
       const htmlContent = editorRef.current.innerHTML;
-      const textContent = mode === 'create'
-        ? editorRef.current.textContent || ''
-        : htmlToPlainText(htmlContent);
+      const textContent = htmlToPlainText(htmlContent);
       
       setModifiedContent(textContent);
 
@@ -177,9 +155,7 @@ export function useBasicEditorLogic({
         setPlaceholders(extracted);
       }
       
-      if (blocks.length > 0) {
-        onUpdateBlock(blocks[0].id, { content: textContent });
-      }
+      onContentChange(textContent);
 
       if (observerRef.current) {
         observerRef.current.disconnect();
@@ -197,18 +173,13 @@ export function useBasicEditorLogic({
         }
       }
     }
-  }, [blocks, mode, onUpdateBlock]);
+  }, [onContentChange, mode]);
 
   const handleEditorInput = useCallback(() => {
     if (!editorRef.current) return;
 
-    const currentRawContent = mode === 'create'
-      ? editorRef.current.textContent || ''
-      : editorRef.current.innerHTML;
-
-    const textContent = mode === 'create'
-      ? currentRawContent
-      : htmlToPlainText(currentRawContent);
+    const currentHtml = editorRef.current.innerHTML;
+    const textContent = htmlToPlainText(currentHtml);
     
     setModifiedContent(textContent);
 
@@ -217,10 +188,8 @@ export function useBasicEditorLogic({
       setPlaceholders(extracted);
     }
     
-    if (blocks.length > 0) {
-      onUpdateBlock(blocks[0].id, { content: textContent });
-    }
-  }, [blocks, mode, onUpdateBlock]);
+    onContentChange(textContent);
+  }, [onContentChange, mode]);
 
   const handleEditorKeyDown = useCallback((e: React.KeyboardEvent) => {
     // CRITICAL: Stop all key events from bubbling up to prevent dialog from closing
@@ -254,7 +223,7 @@ export function useBasicEditorLogic({
 
     let baseContent = (mode === 'customize' && initialContentRef.current
       ? initialContentRef.current
-      : templateContent).replace(/\r\n/g, '\n');
+      : content).replace(/\r\n/g, '\n');
 
     const values = updatedPlaceholders.reduce<Record<string, string>>((acc, p) => {
       if (p.value) acc[p.key] = p.value;
@@ -264,10 +233,7 @@ export function useBasicEditorLogic({
     baseContent = replacePlaceholders(baseContent, values);
 
     setModifiedContent(baseContent);
-
-    if (blocks.length > 0) {
-      onUpdateBlock(blocks[0].id, { content: baseContent });
-    }
+    onContentChange(baseContent);
 
     if (editorRef.current && !isEditing && mode === 'customize') {
       if (observerRef.current) {
@@ -283,7 +249,7 @@ export function useBasicEditorLogic({
         });
       }
     } else if (editorRef.current && mode === 'create') {
-      editorRef.current.textContent = baseContent;
+      editorRef.current.innerHTML = baseContent.replace(/\n/g, '<br>');
     }
 
     setTimeout(() => {
@@ -291,7 +257,7 @@ export function useBasicEditorLogic({
         inputRefs.current[activeInputIndex.current]?.focus();
       }
     }, 0);
-  }, [isEditing, mode, placeholders, templateContent, blocks, onUpdateBlock]);
+  }, [isEditing, mode, placeholders, content, onContentChange]);
 
   return {
     // State
@@ -302,12 +268,8 @@ export function useBasicEditorLogic({
     
     // Refs
     editorRef,
-    observerRef,
     inputRefs,
     activeInputIndex,
-    
-    // Content management
-    templateContent,
     
     // Event handlers
     handleEditorFocus,
