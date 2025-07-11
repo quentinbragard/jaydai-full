@@ -1,0 +1,201 @@
+/* src/extension/welcome/welcome.css */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Roboto:wght@300;400;500&display=swap');
+
+
+
+/* Scope all styles to the welcome page container */
+.jaydai-welcome {
+  @tailwind base;
+  @tailwind components;
+  @tailwind utilities;
+  /* Basic resets */
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  font-family: 'Roboto', sans-serif;
+  background-color: #0a0a0a;
+  color: #f9fafb;
+}
+
+/* Typography */
+.jaydai-welcome h1, 
+.jaydai-welcome h2, 
+.jaydai-welcome h3, 
+.jaydai-welcome h4, 
+.jaydai-welcome h5, 
+.jaydai-welcome h6 {
+  font-family: 'Poppins', sans-serif;
+  letter-spacing: -0.025em;
+}
+
+
+/* Feature card */
+.jd-feature-card {
+  transition: all 0.2s ease-in-out;
+  background-color: #111827;
+  border: 1px solid #1f2937;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.jd-feature-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+  border-color: #3b82f6;
+}
+
+/* Button transitions */
+.jd-btn-transition {
+  transition: all 0.2s ease;
+}
+
+.jd-btn-transition:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+/* Logo container */
+.jd-logo-container {
+  background-color: #111827;
+  border-radius: 9999px;
+  padding: 0.5rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 5rem;
+  height: 5rem;
+  margin-left: auto;
+  margin-right: auto;
+  border: 1px solid #1f2937;
+}
+
+.jd-logo-container img {
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+/* Animation container */
+.jd-animation-container {
+  height: 3.5rem;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  overflow: hidden;
+  margin-bottom: 1.5rem;
+}
+
+/* Text styling */
+.jd-animation-container div {
+  font-family: 'Poppins', sans-serif;
+}
+
+@media (max-width: 768px) {
+  .jd-animation-container {
+    height: 4rem;
+  }
+}
+
+/* Text utilities */
+.jd-whitespace-nowrap {
+  white-space: nowrap;
+}
+
+.jd-min-w-60 {
+  min-width: 15rem;
+}
+
+/* Typography */
+.jaydai-welcome p {
+  font-family: 'Roboto', sans-serif;
+  line-height: 1.7;
+  font-weight: 400;
+}
+
+.jaydai-welcome button {
+  font-family: 'Poppins', sans-serif;
+  font-weight: 500;
+}
+
+/* Dialog */
+.jd-dialog-content {
+  background-color: #111827;
+  border: 1px solid #1f2937;
+  color: #f9fafb;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .jaydai-welcome h1 {
+    font-size: 2.5rem;
+  }
+  
+  .jd-text-3xl {
+    font-size: 1.5rem;
+  }
+  
+  .jd-min-w-60 {
+    min-width: 12rem;
+  }
+}
+
+/* Font classes */
+.jd-font-heading {
+  font-family: 'Poppins', sans-serif;
+}
+
+.jd-font-sans {
+  font-family: 'Roboto', sans-serif;
+}
+
+/* Inputs */
+.jd-input {
+  background-color: #1f2937;
+  border-color: #374151;
+  color: #f9fafb;
+}
+
+/* Animations */
+@keyframes jd-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.jd-animate-spin {
+  animation: jd-spin 1s linear infinite;
+}
+
+/* Spinner */
+.jd-spinner-welcome {
+  width: 60px;
+  height: 60px;
+  position: relative;
+  margin: 20px auto;
+}
+
+.jd-spinner-welcome .jd-double-bounce1, 
+.jd-spinner-welcome .jd-double-bounce2 {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background-color: #3b82f6;
+  opacity: 0.6;
+  position: absolute;
+  top: 0;
+  left: 0;
+  animation: jd-sk-bounce 2.0s infinite ease-in-out;
+}
+
+.jd-spinner-welcome .jd-double-bounce2 {
+  animation-delay: -1.0s;
+}
+
+@keyframes jd-sk-bounce {
+  0%, 100% { transform: scale(0.0); } 
+  50% { transform: scale(1.0); }
+}
+
+/* Focus styles */
+.jaydai-welcome *:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}

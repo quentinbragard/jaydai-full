@@ -2,27 +2,25 @@ from typing import List
 from fastapi import Depends, HTTPException
 from models.common import APIResponse
 from utils import supabase_helpers
-from .helpers import router, supabase, get_user_pinned_folders, update_user_pinned_folders
+from .helpers import router, supabase
 
 @router.post("/unpin/{folder_id}")
 async def unpin_folder(
     folder_id: int,
-    folder_type: str = "official",
     user_id: str = Depends(supabase_helpers.get_user_from_session_token),
 ) -> APIResponse[List[int]]:
     """Unpin a folder for a user."""
     try:
-        if folder_type not in ["official", "organization"]:
-            raise HTTPException(status_code=400, detail="Invalid folder type")
+        pinned_folder_ids = supabase.table("users_metadata").select("pinned_folder_ids").eq("user_id", user_id).single().execute()
+        pinned_folder_ids = pinned_folder_ids.data.get("pinned_folder_ids", []) if pinned_folder_ids.data else []
+        pinned_folder_ids = pinned_folder_ids if type(pinned_folder_ids) == list else []
 
-        pinned_folders = await get_user_pinned_folders(supabase, user_id)
+        if folder_id in pinned_folder_ids:
+            pinned_folder_ids.remove(folder_id)
 
-        if folder_id in pinned_folders[folder_type]:
-            pinned_folders[folder_type].remove(folder_id)
+        response = supabase.table("users_metadata").update({"pinned_folder_ids": pinned_folder_ids}).eq("user_id", user_id).execute()
 
-        await update_user_pinned_folders(supabase, user_id, folder_type, pinned_folders[folder_type])
-
-        return APIResponse(success=True, data=pinned_folders[folder_type])
+        return APIResponse(success=True, data=pinned_folder_ids)
     except Exception as e:
         if isinstance(e, HTTPException):
             raise e

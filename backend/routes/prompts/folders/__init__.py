@@ -9,8 +9,6 @@ router = APIRouter(tags=["Folders"])
 from .helpers import (
     router,
     supabase,
-    FolderCreate,
-    FolderUpdate,
     PromptType,
     get_user_organizations,
     get_user_company,
@@ -42,21 +40,20 @@ from . import pin_folder
 from . import unpin_folder
 from . import update_pinned_folders_endpoint
 from . import get_template_folders
-from . import reorder_folders
-from . import toggle_priority
-from . import move_folder
-from . import get_available_parents
 
 __all__ = [
     "router",
     "supabase",
-    "FolderCreate",
-    "FolderUpdate",
-    "PromptType",
-    "get_user_organizations",
-    "get_user_company",
-    "fetch_folders_by_type",
+    "create_folder",
+    "update_folder",
+    "delete_folder",
+    "pin_folder",
+    "unpin_folder",
+    "update_pinned_folders_endpoint",
+    "get_template_folders",
+    "get_folders",
     "get_template_folders_by_type",
+    "fetch_folders_by_type",
     "fetch_templates_for_folders",
     "organize_templates_by_folder",
     "add_templates_to_folders",

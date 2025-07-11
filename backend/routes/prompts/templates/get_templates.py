@@ -14,7 +14,6 @@ async def get_templates(
     user_id: str = Depends(supabase_helpers.get_user_from_session_token),
 ):
     """Get templates filtered by type or folder IDs."""
-    print("=================================")
     try:
         query = supabase.table("prompt_templates").select("*")
 
@@ -35,7 +34,6 @@ async def get_templates(
             processed = process_template_for_response(template_data, locale)
             templates.append(processed)
             
-
         return APIResponse(success=True, data=templates)
 
     except Exception as e:

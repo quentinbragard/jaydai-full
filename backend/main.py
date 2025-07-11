@@ -1,14 +1,18 @@
+# main.py - MODIFICATIONS (Add the highlighted lines)
+
 from fastapi import FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
-from routes import auth, save, stats, notifications, prompts, user
+from routes import auth, save, stats, notifications, prompts, user, organizations, onboarding
 import time
 import json
 from supabase import create_client, Client
 import os
 import dotenv
 
-dotenv.load_dotenv()
+# ADD THIS IMPORT
+from utils.middleware import AccessControlMiddleware
 
+dotenv.load_dotenv()
 
 app = FastAPI()
 
@@ -20,17 +24,24 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
-# Include all routers
+# ADD THIS MIDDLEWARE REGISTRATION
+app.add_middleware(AccessControlMiddleware)
+
+# Include all routers (existing code - no changes)
 app.include_router(auth.router)
 app.include_router(save.router)
 app.include_router(stats.router)
 app.include_router(notifications.router)
 app.include_router(user.router)
 app.include_router(prompts.router)
+app.include_router(organizations.router, prefix="/organizations")
+app.include_router(onboarding.router, prefix="/onboarding")
+
+# Rest of your existing main.py code remains unchanged...
 
 @app.get("/")
 async def root():
-    return {"message": "Welcome to Jaaaaaaydai API", "status": "running"}
+    return {"message": "Welcome to Jaydai API", "status": "running"}
 
 @app.get("/health")
 async def health_check():

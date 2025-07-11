@@ -1,68 +1,59 @@
-from fastapi import Depends, HTTPException
+# routes/prompts/templates/create_template.py - REPLACE ENTIRE FUNCTION
+from fastapi import Depends, HTTPException, Request
 from models.prompts.templates import TemplateUpdate, TemplateResponse
 from models.common import APIResponse
 from utils import supabase_helpers
-from utils.prompts import validate_block_access, normalize_localized_field, process_template_for_response
+from utils.prompts import process_template_for_response, normalize_localized_field
+from utils.access_control import user_has_access_to_template, user_has_access_to_folder
+from utils.middleware.localization import extract_locale_from_request
 from . import router, supabase
 
+
+# routes/prompts/templates/update_template.py - REPLACE ENTIRE FUNCTION
 @router.put("/{template_id}", response_model=APIResponse[TemplateResponse])
 async def update_template(
     template_id: str,
     template: TemplateUpdate,
+    request: Request,
     user_id: str = Depends(supabase_helpers.get_user_from_session_token),
 ):
-    """Update an existing template with metadata support."""
+    """Update an existing template with access control validation."""
     try:
-        existing_template = supabase.table("prompt_templates").select("*").eq("id", template_id).single().execute()
-
-        if not existing_template.data:
+        locale = extract_locale_from_request(request)
+        
+        # Validate template access
+        try:
+            template_id_int = int(template_id)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid template ID format")
+        
+        access = user_has_access_to_template(supabase, user_id, template_id_int)
+        if access is None:
             raise HTTPException(status_code=404, detail="Template not found")
+        if not access:
+            raise HTTPException(status_code=403, detail="Access denied to this template")
 
-        template_data = existing_template.data
+        # Validate folder access if folder_id is being updated
+        if template.folder_id is not None and template.folder_id != 0:
+            folder_access = user_has_access_to_folder(supabase, user_id, template.folder_id)
+            if folder_access is None:
+                raise HTTPException(status_code=404, detail="Folder not found")
+            if not folder_access:
+                raise HTTPException(status_code=403, detail="Access denied to specified folder")
 
-        if template_data.get("type") == "user" and template_data.get("user_id") != user_id:
-            raise HTTPException(status_code=403, detail="Access denied")
-
+        # Build update data
         update_data = {}
-        current_locale = "en"
-
+        
         if template.title is not None:
-            update_data["title"] = normalize_localized_field(template.title, current_locale)
-
+            update_data["title"] = normalize_localized_field(template.title, locale)
         if template.content is not None:
-            update_data["content"] = normalize_localized_field(template.content, current_locale)
-
-
-        if template.metadata is not None:
-            metadata_block_ids = []
-            if template.metadata:
-                metadata_block_ids = [
-                    template.metadata.role,
-                    template.metadata.context,
-                    template.metadata.goal,
-                    template.metadata.tone_style or 0,
-                    template.metadata.output_format or 0,
-                    template.metadata.audience or 0,
-                ]
-                if template.metadata.example:
-                    metadata_block_ids.extend(template.metadata.example)
-                if template.metadata.constraint:
-                    metadata_block_ids.extend(template.metadata.constraint)
-                metadata_block_ids = [bid for bid in metadata_block_ids if bid and bid != 0]
-
-            if metadata_block_ids:
-                has_access = await validate_block_access(metadata_block_ids, user_id)
-                if not has_access:
-                    raise HTTPException(status_code=403, detail="Access denied to one or more metadata blocks")
-
-            update_data["metadata"] = template.metadata.dict()
-
+            update_data["content"] = normalize_localized_field(template.content, locale)
         if template.description is not None:
-            update_data["description"] = normalize_localized_field(template.description, current_locale)
-
+            update_data["description"] = normalize_localized_field(template.description, locale)
         if template.folder_id is not None:
-            update_data["folder_id"] = template.folder_id
-
+            update_data["folder_id"] = template.folder_id if template.folder_id != 0 else None
+        if template.metadata is not None:
+            update_data["metadata"] = template.metadata.dict() if template.metadata else {}
 
         if not update_data:
             raise HTTPException(status_code=400, detail="No valid fields to update")
@@ -70,7 +61,7 @@ async def update_template(
         response = supabase.table("prompt_templates").update(update_data).eq("id", template_id).execute()
 
         if response.data:
-            processed_template = process_template_for_response(response.data[0], current_locale)
+            processed_template = process_template_for_response(response.data[0], locale)
             return APIResponse(success=True, data=processed_template)
         else:
             raise HTTPException(status_code=400, detail="Failed to update template")
@@ -79,3 +70,5 @@ async def update_template(
         if isinstance(e, HTTPException):
             raise e
         raise HTTPException(status_code=500, detail=f"Error updating template: {str(e)}")
+
+

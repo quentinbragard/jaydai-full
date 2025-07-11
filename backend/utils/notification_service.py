@@ -35,7 +35,7 @@ class NotificationService:
                     "title": "welcome_notification_title", # Use localization key
                     "body": "welcome_notification_body", # Use localization key with personalization
                     "metadata": {
-                        "action_type": "openLinkedIn",
+                        "action_type": "openUrl",
                         "action_title_key": "followOnLinkedIn",
                         "action_url": "https://www.linkedin.com/company/104914264/admin/dashboard/"
                     }

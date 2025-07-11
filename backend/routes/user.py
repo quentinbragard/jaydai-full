@@ -31,7 +31,7 @@ async def get_user_metadata(user_id: str = Depends(supabase_helpers.get_user_fro
     """Get metadata for a specific user."""
     try:
         response = supabase.table("users_metadata") \
-            .select("name, additional_email, phone_number, additional_organization, company_id, pinned_folder_ids") \
+            .select("name, additional_email, phone_number, additional_organization, company_id, pinned_folder_ids, pinned_template_ids, organization_ids") \
             .eq("user_id", user_id) \
             .single() \
             .execute()
@@ -45,7 +45,8 @@ async def get_user_metadata(user_id: str = Depends(supabase_helpers.get_user_fro
                     "phone_number": None,
                     "additional_organization": None,
                     "company_id": None,
-                    "pinned_folder_ids": []
+                    "pinned_folder_ids": [],
+                    "pinned_template_ids": []
                 }
             }
             

@@ -26,16 +26,6 @@ supabase: Client = create_client(os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_
 
 router = APIRouter(tags=["Folders"])
 
-class FolderBase(BaseModel):
-    name: str
-    path: str
-    description: Optional[str] = None
-
-class FolderCreate(FolderBase):
-    parent_id: Optional[int] = None
-
-class FolderUpdate(FolderBase):
-    pass
 
 class PromptType(str, Enum):
     official = "official"

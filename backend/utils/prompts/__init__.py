@@ -7,7 +7,8 @@ from .locales import (
     create_localized_field,
     update_localized_field,
     get_supported_locales,
-    is_locale_supported
+    is_locale_supported,
+    ensure_localized_field
 )
 
 from .folders import (
@@ -35,7 +36,7 @@ __all__ = [
     'update_localized_field',
     'get_supported_locales',
     'is_locale_supported',
-    
+    'ensure_localized_field',
     # Folder utilities
     'determine_folder_type',
     'process_folder_for_response',

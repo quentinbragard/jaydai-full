@@ -1,24 +1,26 @@
 # Updated routes/prompts/folders/get_folders.py
 
 from typing import List, Optional, Dict, Any
-from fastapi import Depends, HTTPException, Query
+from fastapi import Depends, HTTPException, Query, Request
 from models.common import APIResponse
 from utils import supabase_helpers
 from .helpers import supabase, router
 from utils.prompts import process_folder_for_response, process_template_for_response
 from utils.access_control import get_user_metadata
+from utils.middleware.localization import extract_locale_from_request
 
 async def fetch_accessible_folders(
     supabase,
     user_id: str,
     folder_types: List[str],
-    locale: str = "en"
+    locale: str,
 ) -> Dict[str, List[Dict]]:
     """
     Fetch all accessible folders by type with proper access control.
     """
+    
     user_metadata = get_user_metadata(supabase, user_id)
-    pinned_folder_ids = await get_user_pinned_folder_ids(supabase, user_id)
+    print(f"User metadataaaaaaaaa: {user_metadata}")
     
     folders_by_type = {}
     
@@ -30,97 +32,35 @@ async def fetch_accessible_folders(
             response = supabase.table("prompt_folders").select("*").eq("user_id", user_id).eq("type", "user").execute()
             folders = response.data or []
             
-        elif folder_type == "official":
-            # Get pinned official folders and their necessary hierarchy
-            if pinned_folder_ids:
-                print(f"Debug: Looking for pinned folder IDs: {pinned_folder_ids}")
-                
-                # Get all official folders that are pinned
-                all_official_folders = []
-                
-                # Global official folders
-                global_response = supabase.table("prompt_folders").select("*") \
-                    .eq("type", "official") \
-                    .is_("user_id", "null") \
-                    .is_("company_id", "null") \
-                    .is_("organization_id", "null") \
-                    .execute()
-                print(f"Debug: Found {len(global_response.data or [])} global official folders")
-                all_official_folders.extend(global_response.data or [])
-                
-                # Organization official folders
-                org_ids = user_metadata.get("organization_ids", [])
-                print(f"Debug: User organization IDs: {org_ids}")
-                if org_ids:
-                    for org_id in org_ids:
-                        org_response = supabase.table("prompt_folders").select("*") \
-                            .eq("type", "official") \
-                            .eq("organization_id", org_id) \
-                            .execute()
-                        print(f"Debug: Found {len(org_response.data or [])} org folders for org {org_id}")
-                        all_official_folders.extend(org_response.data or [])
-                
-                print(f"Debug: Total official folders found: {len(all_official_folders)}")
-                print(f"Debug: Official folder IDs: {[f['id'] for f in all_official_folders]}")
-                
-                # Filter to only include pinned folders
-                folders = [f for f in all_official_folders if f["id"] in pinned_folder_ids]
-                print(f"Debug: Filtered to {len(folders)} pinned folders")
-            else:
-                print("Debug: No pinned folder IDs found")
                         
         elif folder_type == "company":
             # Get pinned company folders
             company_id = user_metadata.get("company_id")
-            if company_id and pinned_folder_ids:
+            if company_id:
                 response = supabase.table("prompt_folders").select("*") \
                     .eq("type", "company") \
                     .eq("company_id", company_id) \
                     .execute()
                 # Filter to only pinned folders
-                all_company_folders = response.data or []
-                folders = [f for f in all_company_folders if f["id"] in pinned_folder_ids]
+                folders = response.data or []
         
-        elif folder_type == "mixed":
-            # NEW: Handle mixed type - combination of official and organization folders
-            if pinned_folder_ids:
-                print(f"Debug: Fetching mixed folders for pinned IDs: {pinned_folder_ids}")
-                
-                all_mixed_folders = []
-                
-                # Global official folders
-                global_response = supabase.table("prompt_folders").select("*") \
-                    .eq("type", "official") \
-                    .is_("user_id", "null") \
-                    .is_("company_id", "null") \
-                    .is_("organization_id", "null") \
+        elif folder_type == "organization":
+            # Get pinned organization folders
+            organization_ids = user_metadata.get("organization_ids")
+            if organization_ids  and len(organization_ids) > 0:
+                conditions = []
+                for org_id in organization_ids:
+                    conditions.append(f"organization_id.eq.{org_id}")
+                response = supabase.table("prompt_folders").select("*") \
+                    .eq("type", "organization") \
+                    .or_(",".join(conditions)) \
                     .execute()
-                all_mixed_folders.extend(global_response.data or [])
-                
-                # Organization official folders
-                org_ids = user_metadata.get("organization_ids", [])
-                if org_ids:
-                    for org_id in org_ids:
-                        org_response = supabase.table("prompt_folders").select("*") \
-                            .eq("type", "official") \
-                            .eq("organization_id", org_id) \
-                            .execute()
-                        all_mixed_folders.extend(org_response.data or [])
-                
-                # Company folders if user has company
-                company_id = user_metadata.get("company_id")
-                if company_id:
-                    company_response = supabase.table("prompt_folders").select("*") \
-                        .eq("type", "company") \
-                        .eq("company_id", company_id) \
-                        .execute()
-                    all_mixed_folders.extend(company_response.data or [])
-                
                 # Filter to only pinned folders
-                folders = [f for f in all_mixed_folders if f["id"] in pinned_folder_ids]
-                print(f"Debug: Mixed folders filtered to {len(folders)} pinned folders")
+                folders = response.data or []
+                print(f"Reeeesponse: {response}")
+        
             else:
-                print("Debug: No pinned folder IDs found for mixed folders")
+                print("Debug: No pinned folder IDs found for organization folders")
         
         # Process folders for response
         processed_folders = []
@@ -134,23 +74,24 @@ async def fetch_accessible_folders(
 
 @router.get("", response_model=APIResponse[Dict])
 async def get_folders(
-    type: Optional[str] = Query(None, description="Folder type filter (user, official, company, mixed)"),
+    request: Request,
+    type: Optional[str] = Query(None, description="Folder type filter (user, company, organization)"),
     withSubfolders: bool = Query(False, description="Include nested subfolders"),
     withTemplates: bool = Query(False, description="Include templates for each folder"),
-    locale: Optional[str] = Query("en", description="Locale for localized content"),
     user_id: str = Depends(supabase_helpers.get_user_from_session_token),
 ) -> APIResponse[Dict]:
     """
     Get folders with optional nested structure and templates.
     """
     try:
+        locale = extract_locale_from_request(request)
         # Determine which folder types to fetch
         if type:
-            if type not in ["user", "official", "company", "mixed"]:
+            if type not in ["user", "company", "organization"]:
                 raise HTTPException(status_code=400, detail="Invalid folder type")
             folder_types = [type]
         else:
-            folder_types = ["user", "official", "company"]
+            folder_types = ["user", "company", "organization"]
         
         # Fetch all accessible folders by type (includes descendants for pinned folders)
         folders_by_type = await fetch_accessible_folders(supabase, user_id, folder_types, locale)
@@ -194,26 +135,6 @@ async def get_folders(
                     
                     # Add root templates to folder_id = 0
                     templates_by_folder[0] = processed_root_templates
-                    
-                    # Create virtual root folder
-                    virtual_root_folder = {
-                        "id": 0,
-                        "created_at": None,
-                        "user_id": user_id,
-                        "organization_id": None,
-                        "parent_folder_id": None,
-                        "content": {
-                            "en": "Root Templates",
-                            "fr": "Modèles Racine"
-                        },
-                        "description": "Templates not assigned to any folder",
-                        "company_id": None,
-                        "type": "user",
-                        "name": "Root Templates"
-                    }
-                    
-                    # Add the virtual folder to the beginning of folders list
-                    folders = [virtual_root_folder] + folders
             
             if not folders:
                 result["folders"][folder_type] = []
@@ -293,7 +214,7 @@ async def fetch_templates_for_all_folders(
 async def build_nested_folder_structure(
     folders: List[Dict],
     templates_by_folder: Dict[int, List[Dict]],
-    parent_id: Optional[int] = None,
+    parent_folder_id: Optional[int] = None,
     with_templates: bool = False,
     processed_ids: Optional[set] = None
 ) -> List[Dict]:
@@ -305,14 +226,14 @@ async def build_nested_folder_structure(
     
     result = []
     
-    # Find folders with the specified parent_id
+    # Find folders with the specified parent_folder_id
     child_folders = []
     for f in folders:
-        folder_parent_id = f.get("parent_folder_id")
+        folder_parent_folder_id = f.get("parent_folder_id")
         folder_id = f.get("id")
         
         # Skip circular references (folder cannot be its own parent)
-        if folder_id == folder_parent_id:
+        if folder_id == folder_parent_folder_id:
             print(f"Debug: Skipping circular reference for folder {folder_id}")
             continue
             
@@ -320,7 +241,7 @@ async def build_nested_folder_structure(
         if folder_id in processed_ids:
             continue
             
-        if folder_parent_id == parent_id:
+        if folder_parent_folder_id == parent_folder_id:
             child_folders.append(f)
     
     for folder in child_folders:

@@ -1,153 +1,52 @@
-# Updated routes/prompts/folders/pin_folder.py
-
+# routes/prompts/folders/create_folder.py - REPLACE ENTIRE FUNCTION
 from fastapi import Depends, HTTPException
 from models.common import APIResponse
 from utils import supabase_helpers
-from .helpers import router, supabase, determine_folder_type
-from utils.prompts.folders import add_folder_to_pinned
+from .helpers import router, supabase
 
+from utils.access_control import user_has_access_to_folder
+
+
+# routes/prompts/folders/pin_folder.py - REPLACE THE pin_folder FUNCTION
 @router.post("/pin/{folder_id}")
 async def pin_folder(
     folder_id: int,
     user_id: str = Depends(supabase_helpers.get_user_from_session_token),
 ) -> APIResponse[dict]:
-    """
-    Pin a folder for a user (works with unified pinned_folder_ids).
-    """
+    """Pin a folder with access control validation."""
     try:
-        # Verify folder exists and determine its type
-        folder = supabase.table("prompt_folders").select("*").eq("id", folder_id).single().execute()
-        if not folder.data:
+        # Validate folder access
+        access = user_has_access_to_folder(supabase, user_id, folder_id)
+        if access is None:
             raise HTTPException(status_code=404, detail="Folder not found")
+        if not access:
+            raise HTTPException(status_code=403, detail="Access denied to this folder")
         
-        folder_type = determine_folder_type(folder.data)
-        
-        # Only allow pinning of official and company folders
-        if folder_type == "user":
-            raise HTTPException(status_code=400, detail="Cannot pin user folders")
-        
-        # Verify user has access to this folder
-        if folder_type == "company":
-            # Check if user belongs to the same company
-            user_metadata = supabase.table("users_metadata").select("company_id").eq("user_id", user_id).single().execute()
-            if not user_metadata.data or user_metadata.data.get("company_id") != folder.data.get("company_id"):
-                raise HTTPException(status_code=403, detail="Access denied to this company folder")
-        
-        elif folder_type == "official" and folder.data.get("organization_id"):
-            # Check if user belongs to this organization
-            user_metadata = supabase.table("users_metadata").select("organization_ids").eq("user_id", user_id).single().execute()
-            if not user_metadata.data:
-                raise HTTPException(status_code=403, detail="Access denied to this organization folder")
-            
-            org_ids = user_metadata.data.get("organization_ids", [])
-            if folder.data.get("organization_id") not in org_ids:
-                raise HTTPException(status_code=403, detail="Access denied to this organization folder")
-        
-        # Add folder to pinned list
-        result = await add_folder_to_pinned(supabase, user_id, folder_id)
-        
-        if not result.get("success"):
-            raise HTTPException(status_code=500, detail=result.get("error", "Failed to pin folder"))
+        # Get current pinned folder ids
+        user_meta_resp = (
+            supabase.table("users_metadata")
+            .select("pinned_folder_ids")
+            .eq("user_id", user_id)
+            .single()
+            .execute()
+        )
+        current_ids = user_meta_resp.data.get("pinned_folder_ids", []) if user_meta_resp.data else []
+        current_ids = current_ids if isinstance(current_ids, list) else []
+
+        if folder_id not in current_ids:
+            new_ids = current_ids + [folder_id]
+            if user_meta_resp.data:
+                supabase.table("users_metadata").update({"pinned_folder_ids": new_ids}).eq("user_id", user_id).execute()
+            else:
+                supabase.table("users_metadata").insert({"user_id": user_id, "pinned_folder_ids": new_ids}).execute()
         
         return APIResponse(success=True, data={
             "folder_id": folder_id,
             "pinned": True,
-            "message": result.get("message", "Folder pinned successfully")
+            "message": "Folder pinned successfully"
         })
         
     except Exception as e:
         if isinstance(e, HTTPException):
             raise e
         raise HTTPException(status_code=500, detail=f"Error pinning folder: {str(e)}")
-
-
-# Updated routes/prompts/folders/unpin_folder.py
-
-from fastapi import Depends, HTTPException
-from models.common import APIResponse
-from utils import supabase_helpers
-from .helpers import router, supabase
-from utils.prompts.folders import remove_folder_from_pinned
-
-@router.post("/unpin/{folder_id}")
-async def unpin_folder(
-    folder_id: int,
-    user_id: str = Depends(supabase_helpers.get_user_from_session_token),
-) -> APIResponse[dict]:
-    """
-    Unpin a folder for a user (works with unified pinned_folder_ids).
-    """
-    try:
-        # Remove folder from pinned list
-        result = await remove_folder_from_pinned(supabase, user_id, folder_id)
-        
-        if not result.get("success"):
-            raise HTTPException(status_code=500, detail=result.get("error", "Failed to unpin folder"))
-        
-        return APIResponse(success=True, data={
-            "folder_id": folder_id,
-            "pinned": False,
-            "message": result.get("message", "Folder unpinned successfully")
-        })
-        
-    except Exception as e:
-        if isinstance(e, HTTPException):
-            raise e
-        raise HTTPException(status_code=500, detail=f"Error unpinning folder: {str(e)}")
-
-
-# Updated routes/prompts/folders/update_pinned_folders_endpoint.py
-
-from typing import List
-from fastapi import Depends, HTTPException
-from pydantic import BaseModel
-from models.common import APIResponse
-from utils import supabase_helpers
-from .helpers import router, supabase
-from utils.prompts.folders import update_user_pinned_folders
-
-class UpdatePinnedFoldersRequest(BaseModel):
-    folder_ids: List[int]
-
-@router.post("/update-pinned")
-async def update_pinned_folders_endpoint(
-    request: UpdatePinnedFoldersRequest,
-    user_id: str = Depends(supabase_helpers.get_user_from_session_token),
-) -> APIResponse[dict]:
-    """
-    Update all pinned folders in one call (unified structure).
-    """
-    try:
-        result = await update_user_pinned_folders(supabase, user_id, request.folder_ids)
-        
-        if not result.get("success"):
-            raise HTTPException(status_code=500, detail=result.get("error", "Failed to update pinned folders"))
-        
-        return APIResponse(success=True, data={
-            "pinned_folder_ids": request.folder_ids,
-            "message": "Pinned folders updated successfully"
-        })
-        
-    except Exception as e:
-        if isinstance(e, HTTPException):
-            raise e
-        raise HTTPException(status_code=500, detail=f"Error updating pinned folders: {str(e)}")
-
-
-# New endpoint to get pinned folders
-@router.get("/pinned")
-async def get_pinned_folders(
-    user_id: str = Depends(supabase_helpers.get_user_from_session_token),
-) -> APIResponse[List[int]]:
-    """
-    Get user's pinned folder IDs.
-    """
-    try:
-        from utils.prompts.folders import get_user_pinned_folders
-        
-        pinned_ids = await get_user_pinned_folders(supabase, user_id)
-        
-        return APIResponse(success=True, data=pinned_ids)
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error retrieving pinned folders: {str(e)}")

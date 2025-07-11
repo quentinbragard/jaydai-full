@@ -5,7 +5,7 @@ Updated utility functions for folder operations with new pinned folder structure
 """
 from typing import Dict, List, Optional, Any
 from supabase import Client
-from .locales import extract_localized_field
+from utils.prompts.locales import extract_localized_field
 from utils.access_control import apply_access_conditions
 
 def determine_folder_type(folder: Dict) -> str:
@@ -25,37 +25,19 @@ def determine_folder_type(folder: Dict) -> str:
     else:
         return "official"
 
-def process_folder_for_response(folder: Dict, locale: str = "en") -> Dict:
-    """
-    Process a folder record for API response with localization.
-    
-    Args:
-        folder: Raw folder record from database
-        locale: Requested locale
-        
-    Returns:
-        Processed folder dict ready for API response
-    """
-    processed = folder.copy()
-    
-    # Determine if this is user content
-    folder_type = determine_folder_type(folder)
-    is_user_content = folder_type == "user"
-    
-    # Extract localized fields
-    if "title" in folder:
-        processed["name"] = extract_localized_field(folder["title"], locale, is_user_content)
-    
-    if "description" in folder:
-        processed["description"] = extract_localized_field(folder["description"], locale, is_user_content)
-    
-    # Add folder type for backward compatibility
-    processed["type"] = folder_type
-    
-    # Remove JSON fields to avoid confusion in response
-    processed.pop("title", None)
-    
-    return processed
+def process_folder_for_response(folder_data: dict, locale: str = "en") -> dict:
+    """Process block data for API response with localized strings"""
+    return {
+        "id": folder_data.get("id"),
+        "type": folder_data.get("type"),
+        "title": extract_localized_field(folder_data.get("title", {}), locale),
+        "description": extract_localized_field(folder_data.get("description", {}), locale),
+        "created_at": folder_data.get("created_at"),
+        "user_id": folder_data.get("user_id"),
+        "organization_id": folder_data.get("organization_id"),
+        "company_id": folder_data.get("company_id"),
+        "parent_folder_id": folder_data.get("parent_folder_id"),
+    }
 
 async def get_user_pinned_folders(supabase: Client, user_id: str) -> List[int]:
     """

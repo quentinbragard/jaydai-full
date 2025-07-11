@@ -1,3 +1,4 @@
+# utils/prompts/locales.py
 """
 Utility functions for handling localization in prompts system.
 """
@@ -85,3 +86,12 @@ def get_supported_locales() -> list[str]:
 def is_locale_supported(locale: str) -> bool:
     """Check if a locale is supported."""
     return locale in get_supported_locales()
+
+def ensure_localized_field(content: Union[str, Dict[str, str]], locale: str = "en") -> Dict[str, str]:
+    """Ensure content is in proper localized format for storage"""
+    if isinstance(content, str):
+        return {locale: content}
+    elif isinstance(content, dict):
+        return content
+    else:
+        return {locale: str(content) if content else ""}
